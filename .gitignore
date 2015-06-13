@@ -1,0 +1,11 @@
+.Rproj.user
+.Rhistory
+.RData
+.html
+.pdf
+.docx
+DataIn/
+DataOut/
+Results/
+Notes/
+
