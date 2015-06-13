@@ -64,7 +64,7 @@ fc_family <- "ejaccard"             ## distance metric
 ```
 Now we can invoke kcca to do clustering. Start with three clusters to show the process.
 ``` {r}
-fc_seed <- 1234567892
+fc_seed <- 169       ## Why this value will become clear below
 num_clusters <- 3
 
 set.seed(fc_seed)
