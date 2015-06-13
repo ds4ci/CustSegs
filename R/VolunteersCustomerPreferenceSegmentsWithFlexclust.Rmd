@@ -2,7 +2,7 @@
 title: "Customer Preference Segments with flexclust - volunteers"
 author: "Jim Porzak"
 date: "June 9, 2015"
-output: word_document
+output: html_document
 ---
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}

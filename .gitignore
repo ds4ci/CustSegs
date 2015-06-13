@@ -1,9 +1,9 @@
 .Rproj.user
 .Rhistory
 .RData
-.html
-.pdf
-.docx
+*.html
+*.pdf
+*.docx
 DataIn/
 DataOut/
 Results/
