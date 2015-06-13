@@ -1,0 +1,117 @@
+---
+title: "Customer Preference Segments with flexclust - volunteers"
+author: "Jim Porzak"
+date: "June 9, 2015"
+output: word_document
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# overall set-up 
+library(flexclust)
+library(stringr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+data("volunteers")
+vol_ch <- volunteers[-(1:2)]
+```
+
+### Introduction 
+
+Customer preference surveys ask a question like "Please check off of the following [things] which are [important] 
+for you." This example uses the _volunteers_ data set from package _flexclust_. From the package documentation: 
+
+> Part of an Australian survey on motivation of 1415 volunteers to work for non-profit organisations like Red Cross, State Emergency Service, Rural Fire Service, Surf Life Saving, Rotary, Parents and Citizens Associations, etc.. 
+
+The survey has `r ncol(vol_ch)` preference check boxes for various motivations which were important motivators in their decision to volunteer. These are: `r paste(colnames(vol_ch), collapse = ", ")`.
+
+We will show how the _flexclust_ package ...
+
+**NTS: include references to Fritz's package & papers & Sara & Fritz's marketing application papers.**
+
+### An example _flexclust_ segmentation run
+
+First, make a data frame with just the preference choice columns in _vol_.
+``` {r}
+library(flexclust)
+data("volunteers")
+vol_ch <- volunteers[-(1:2)]
+vol_ch[1:5, 1:7]
+vol.mat <- as.matrix(vol_ch)
+```
+
+Plot the percent of each preference that is checked.
+
+``` {r echo = FALSE}
+vol_ch.pcts <- vol_ch %>% 
+  gather("Question", "Response") %>% 
+  group_by(Question) %>% 
+  summarize(Pct_Checked = 100.0 * sum(Response) / n())
+
+ggplot(vol_ch.pcts, aes(x = Pct_Checked, y = reorder(Question, -as.integer(Question)))) + 
+  geom_point(size = 3) + coord_cartesian(xlim = c(0, 100)) +
+  ylab("Preference Question") + xlab("% Checked") + ggtitle("Response to Each Preference")
+```
+
+Set the parameters for the cluster algorithm.
+``` {r}
+fc_cont <- new("flexclustControl")  ## flexclustControl object holds "hyperparameters"
+fc_cont@tolerance <- 0.1   ## kcca only uses if classify == "weighted"
+fc_cont@iter.max <- 30
+fc_cont@verbose <- 1
+
+fc_family <- "ejaccard"             ## distance metric
+```
+Now we can invoke kcca to do clustering. Start with three clusters to show the process.
+``` {r}
+fc_seed <- 1234567892
+num_clusters <- 3
+
+set.seed(fc_seed)
+
+## verbose > 0 will show iterations
+vol.cl <- kcca(vol.mat, k = num_clusters, save.data = TRUE,
+                control = fc_cont, family = kccaFamily(fc_family))
+
+summary(vol.cl)
+```
+
+``` {r echo = FALSE}
+# set up plot titles for this run
+main_text1 <- "Volunteers Stated Preferences Survey" 
+sub_text <- paste0("kcca ", vol.cl@family@name, " - ", num_clusters, " clusters (seed = ", fc_seed, ")")
+
+```
+#### Segment separation plot (aka neighborhood plot) 
+
+``` {r fig.width = 7, fig.height = 7.7}
+vol.pca <- prcomp(vol.mat)      ## plot on first two principal components
+plot(vol.cl, data = vol.mat, project = vol.pca,
+     main = paste0(main_text1, " - Segment Seperation Plot"), 
+     sub = sub_text)
+```
+
+This plot shows each respondent's preferences plotted on the surface defined by the first two principal components.
+Centroids of each cluster (segment) are the numbered circles. The color indicates the respondent's cluster membership. The solid line (convex hull) encloses 50% of the points in the cluster while the dashed line encloses 95% of the points. The separation between each cluster is indicated by the thinness of the line between any two centroids. Of course, the physical distance between centroids on the PC2 x PC1 plane does not correspond to the actual separation in any non-trivial problem.
+
+#### Segment profile plot - the primary tool for interpreting the solution as customer segments or persona.
+
+``` {r fig.width = 8, fig.height = 6}
+barchart(vol.cl, strip.prefix = "#", shade = TRUE,
+         main = paste0(main_text1, " - Segment Profile Plot"))
+```
+
+
+This plot has a facet for each cluster plotted above. The colors are consistent between the two plots. The header in each facet gives the cluster number, the number of respondents assigned to that cluster and the percent of the total respondents. For each of the preferences, the bar width shows the proportion checked for that cluster. For reference, the overall population proportion is shown by the red line & dot. (which corresponds to the dot plot above). 
+
+A bar is grayed out when the preference is not important is distinguishing a cluster from the others. But note that grayed bar(s) may well be important when coming up with the customer segmentation (or persona) story.
+
+> Exercise for the reader: How would you describe each of these three segments?
+
+These are the basic ideas behind using _flexclust_ to segment customers based on results of a stated preference survey.
+Next we will look at two important practical issues:
+1. Is the cluster solution stable for a given number of clusters (k)?
+2. How many clusters best describe the respondents?
+
+### Stability of the solutions for any k
+Initial manual look at this data shows repeated segment patterns for various starting seeds...
