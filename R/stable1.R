@@ -7,7 +7,7 @@ library(ggplot2)
 
 fc_seed <- 123
 num_clusters <- 3
-num_trys <- 100
+num_trys <- 500
 fc_cont@verbose <- 0
 cli_trys <- NULL
 
@@ -37,9 +37,14 @@ cli_sizes <- cli_trys %>%
   spread(key = clust_label, value = size)
 
 ggplot(cli_sizes, aes(Size_1, Size_2)) +
-  geom_point(alpha = 0.5, size = 4) +
+  geom_point(alpha = 0.5, size = 2) +
   stat_density2d() +
+  ggtitle(paste0("Size of Cluster 2 by Size of Cluster 1 for k=", num_clusters, ", # tries=", num_trys))
 
+## reading off of plot, pick seeds near one of three maxima with cluster rank = order
+#  Top: @(1075, 255): 169
+#  2nd: @(940, 385): 215
+#  3rd: @(1250, 90): 129
 
 
 

@@ -64,7 +64,9 @@ fc_family <- "ejaccard"             ## distance metric
 ```
 Now we can invoke kcca to do clustering. Start with three clusters to show the process.
 ``` {r}
-fc_seed <- 169       ## Why this value will become clear below
+seed1 <- 169       ## Why this value will become clear below
+fc_seed <- seed1
+
 num_clusters <- 3
 
 set.seed(fc_seed)
@@ -97,7 +99,7 @@ Centroids of each cluster (segment) are the numbered circles. The color indicate
 #### Segment profile plot - the primary tool for interpreting the solution as customer segments or persona.
 
 ``` {r fig.width = 8, fig.height = 6}
-barchart(vol.cl, strip.prefix = "#", shade = TRUE,
+barchart(vol.cl, strip.prefix = "#", shade = TRUE, layout = c(3, 1),
          main = paste0(main_text1, " - Segment Profile Plot"))
 ```
 
@@ -114,4 +116,48 @@ Next we will look at two important practical issues:
 2. How many clusters best describe the respondents?
 
 ### Stability of the solutions for any k
-Initial manual look at this data shows repeated segment patterns for various starting seeds...
+
+If we run kcca() on the same data but with different starting seeds for any real customer dataset (in which clusters are somewhat fuzzy), we expect to get different solutions. For example comparing the above solution with two other solutions, we see the results are quite different:
+
+```{r echo = FALSE, fig.width = 5, fig.height = 5}
+fc_cont@verbose <- 0
+set.seed(fc_seed)
+vol.cl <- kcca(vol.mat, k = num_clusters, save.data = TRUE,
+                control = fc_cont, family = kccaFamily(fc_family))
+vol.pca <- prcomp(vol.mat)      ## plot on first two principal components
+plot(vol.cl, data = vol.mat, project = vol.pca,
+           main = paste0("Segment Seperation Plot, k=", num_clusters, ", seed=", fc_seed))
+barchart(vol.cl, strip.prefix = "#", shade = TRUE, layout = c(3, 1),
+         main = paste0("Segment Profile Plot, k=", num_clusters, ", seed=", fc_seed))
+
+fc_seed <- 215
+set.seed(fc_seed)
+vol.cl <- kcca(vol.mat, k = num_clusters, save.data = TRUE,
+                control = fc_cont, family = kccaFamily(fc_family))
+vol.pca <- prcomp(vol.mat)      ## plot on first two principal components
+plot(vol.cl, data = vol.mat, project = vol.pca,
+           main = paste0("Segment Seperation Plot, k=", num_clusters, ", seed=", fc_seed))
+barchart(vol.cl, strip.prefix = "#", shade = TRUE, layout = c(3, 1),
+         main = paste0("Segment Profile Plot, k=", num_clusters, ", seed=", fc_seed))
+
+fc_seed <- 129
+set.seed(fc_seed)
+vol.cl <- kcca(vol.mat, k = num_clusters, save.data = TRUE,
+                control = fc_cont, family = kccaFamily(fc_family))
+vol.pca <- prcomp(vol.mat)      ## plot on first two principal components
+plot(vol.cl, data = vol.mat, project = vol.pca,
+           main = paste0("Segment Seperation Plot, k=", num_clusters, ", seed=", fc_seed))
+barchart(vol.cl, strip.prefix = "#", shade = TRUE,  layout = c(3, 1),
+         main = paste0("Segment Profile Plot, k=", num_clusters, ", seed=", fc_seed))
+
+```
+
+These three examples are somewhat similar in that there a single predominate cluster but looking closer there are
+important difference in how each solution is interpreted.
+
+We need a method to explore many solutions and look for a frequent stable solution. We expect to see some locally
+stable solutions.
+
+
+
+
