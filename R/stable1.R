@@ -1,6 +1,7 @@
 ######
-# Check stability of 3-cluster solution
+# Check stability of 3-cluster solution (prototype stability functions)
 ##
+
 library(tidyr)
 library(dplyr)
 library(ggplot2)
@@ -32,18 +33,15 @@ for (itry in 1:num_trys) {
 cli_sizes <- cli_trys %>%
   dplyr::select(k, seed, clust_num, clust_rank, size) %>%
   filter(clust_rank <= 2) %>%
-  mutate(clust_label = paste0("Size_", clust_rank)) %>%
-  dplyr::select(-clust_rank) %>%
-  spread(key = clust_label, value = size) %>%
-  group_by(k, seed) %>%
-  summarize(c1 = first(clust_num),
-            c2 = last(clust_num),
-            Size_1 = min(Size_1, na.rm = TRUE),
-            Size_2 = min(Size_2, na.rm = TRUE))
+  mutate(clust_label = paste0("Size_", clust_rank),
+         in_order = clust_num == clust_rank) %>%
+  dplyr::select(-clust_rank, -clust_num) %>%
+  spread(key = clust_label, value = size)
+
 
 
 # get location of peak
-s2d <- with(cli_sizes, kde2d(Size_1, Size_2, n = 100))
+# s2d <- with(cli_sizes, kde2d(Size_1, Size_2, n = 100))
 s2d_peak <- which(s2d$z == max(s2d$z))
 Size_1_peak_at <- round(s2d$x[s2d_peak %% 100], 1)
 xend <- Size_1_peak_at + 100

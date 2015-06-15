@@ -100,7 +100,7 @@ Centroids of each cluster (segment) are the numbered circles. The color indicate
 #### Segment profile plot - the primary tool for interpreting the solution as customer segments or persona.
 
 ``` {r fig.width = 8, fig.height = 6}
-barchart(vol.cl, strip.prefix = "#", shade = TRUE, layout = c(3, 1),
+barchart(vol.cl, strip.prefix = "#", shade = TRUE, layout = c(vol.cl@k, 1),
          main = paste0(main_text1, " - Segment Profile Plot"))
 ```
 
@@ -165,7 +165,7 @@ Keeping it very simple, let's just look at the scatter plot of the number of mem
 The plan is to will run kcca() 500 times, incrementing the seed with each run to get data for the plot. 
 First we build up a data.frame capturing @clusinfo for each run, where the run is identified by the values or k and the seed.
 
-```{r echo=TRUE, cache = FALSE}
+```{r echo=TRUE, cache = TRUE}
 fc_seed <- 123
 num_clusters <- 3
 num_trys <- 500
@@ -200,12 +200,12 @@ We need to massage cli_trys so it is suitable for plotting. At the same time we 
 cli_sizes <- cli_trys %>%
   dplyr::select(k, seed, clust_num, clust_rank, size) %>%
   filter(clust_rank <= 2) %>%
-  mutate(clust_label = paste0("Size_", clust_rank)) %>%
-  dplyr::select(-clust_rank) %>%
-  spread(key = clust_label, value = size) %>%
-  group_by(k, seed) %>%
-  summarize(c1 = first(clust_num),
-            c2 = last(clust_num),
+  mutate(clust_label = paste0("Size_", clust_rank),
+         in_order = clust_num == clust_rank) %>%
+  dplyr::select(-clust_rank, -clust_num) %>%
+  spread(key = clust_label, value = size) %>% 
+  group_by(k, seed) %>% 
+  summarize(in_order = all(in_order),
             Size_1 = min(Size_1, na.rm = TRUE),
             Size_2 = min(Size_2, na.rm = TRUE))
 
@@ -234,12 +234,15 @@ Now we just need the distance of each solution's first & second cluster counts t
 
 ``` {r}
 cli_best <- cli_sizes %>%
-  filter(c1 == 1 & c2 == 2) %>%    ## just look at solutions with clusters in decending sizes
+  filter(in_order) %>%    ## just look at solutions with clusters in decending sizes
   mutate(distance = sqrt((Size_1 - Size_1_peak_at)^2 + (Size_2 - Size_2_peak_at)^2)) %>%
-  dplyr::select(-starts_with("c")) %>% 
   arrange(distance)
 cli_best
 ```
 
+### Clusters for each k = 2, 3, 4, ...
 
+``` {r echo=FALSE, fig.width = 8, fig.height = 6}
+for(k in 2:10) fc_rclust(vol.mat, k=k)
+```
 

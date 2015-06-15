@@ -2,3 +2,12 @@
 ^\.Rproj\.user$
 ^README\.Rmd$
 ^README-.*\.png$
+^Notes$
+^DataIn$
+^DataOut$
+^Results$
+Flexclust\_cache$
+Flexclust\_files$
+^.*\.Rmd$
+^.*\.docx$
+^.*\.html$

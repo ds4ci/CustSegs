@@ -1,10 +1,16 @@
 Package: CustSegs
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Tools for Customer Segmentation
 Version: 0.1
 Date: 2015-06-13
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
+Author: Jim Porzak
+Maintainer: Jim Porzak <jim@ds4ci.org>
 Description: More about what it does (maybe more than one line)
-License: What license is it under?
+License: GPL-2
 LazyData: TRUE
+Imports:
+  dplyr,
+  flexclust,
+  ggplot2,
+  MASS,
+  tidyr
