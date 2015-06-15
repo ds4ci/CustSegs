@@ -8,4 +8,6 @@ DataIn/
 DataOut/
 Results/
 Notes/
+*_cache/
+*_files/
 
