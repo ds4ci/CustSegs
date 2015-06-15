@@ -7,6 +7,7 @@ output: html_document
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 # overall set-up 
+library(MASS)
 library(flexclust)
 library(stringr)
 library(dplyr)
@@ -64,7 +65,7 @@ fc_family <- "ejaccard"             ## distance metric
 ```
 Now we can invoke kcca to do clustering. Start with three clusters to show the process.
 ``` {r}
-seed1 <- 169       ## Why this value will become clear below
+seed1 <- 577 #243       ## Why we use this seed will become clear below
 fc_seed <- seed1
 
 num_clusters <- 3
@@ -117,7 +118,7 @@ Next we will look at two important practical issues:
 
 ### Stability of the solutions for any k
 
-If we run kcca() on the same data but with different starting seeds for any real customer dataset (in which clusters are somewhat fuzzy), we expect to get different solutions. For example comparing the above solution with two other solutions, we see the results are quite different:
+If we run kcca() on the same data but with different starting seeds for any real customer dataset (in which clusters are typically somewhat fuzzy), we expect to get different solutions. For example comparing the above solution with two other solutions, we see the results are somewhat different:
 
 ```{r echo = FALSE, fig.width = 5, fig.height = 5}
 fc_cont@verbose <- 0
@@ -152,12 +153,93 @@ barchart(vol.cl, strip.prefix = "#", shade = TRUE,  layout = c(3, 1),
 
 ```
 
-These three examples are somewhat similar in that there a single predominate cluster but looking closer there are
-important difference in how each solution is interpreted.
+These three examples are similar in that there a single predominate cluster but looking closer there are
+important differences in how each solution is interpreted.
 
-We need a method to explore many solutions and look for a frequent stable solution. We expect to see some locally
-stable solutions.
+We need a method to explore many solutions and look for a frequent stable solution. The challenge is coming up with a measure of solution similarty. kcca() returns an object with 17 slots, so there are a lot of metrics we could devise.
 
+Keeping it very simple, let's just look at the scatter plot of the number of members in the two largest clusters. This is easy to get from slot @clusinfo:
+
+`r str(vol.cl@clusinfo)`
+
+The plan is to will run kcca() 500 times, incrementing the seed with each run to get data for the plot. 
+First we build up a data.frame capturing @clusinfo for each run, where the run is identified by the values or k and the seed.
+
+```{r echo=TRUE, cache = FALSE}
+fc_seed <- 123
+num_clusters <- 3
+num_trys <- 500
+fc_cont@verbose <- 0
+cli_trys <- NULL
+
+# build df with cluster info for each seed
+for (itry in 1:num_trys) {
+  fc_seed <- fc_seed + 1
+  set.seed(fc_seed)
+  cli <- kcca(vol.mat, k = num_clusters, save.data = TRUE,
+              control = fc_cont, family = kccaFamily(fc_family))
+  cli_info <- cli@clusinfo %>%
+    mutate(clust_num = row_number(),
+           clust_rank = min_rank(desc(size))) %>%
+    arrange(clust_rank) %>%
+    dplyr::select(c(6, 5, 1:4))
+  cli_try <- cbind(data.frame(k = num_clusters, seed = fc_seed),
+                   cli_info)
+  cli_trys <- rbind(cli_trys, cli_try)
+}
+cli_trys <- as.tbl(cli_trys)
+cli_trys
+```
+
+It is ordered by seed (aka runID) and the cluster rank. "clust_num" is the original cluster sequence number coming out of kcca(). Notice that cluster #1 is not necessarly the largest cluster. (This is an anoyance with the "random walk" nature of kcca(). The same cluster, based on its properties, will not necessarly be in the sequence between runs.)
+
+We need to massage cli_trys so it is suitable for plotting. At the same time we pick up the location of the peak.
+
+``` {r}
+# set up plot of size of rank 2 x rank 1
+cli_sizes <- cli_trys %>%
+  dplyr::select(k, seed, clust_num, clust_rank, size) %>%
+  filter(clust_rank <= 2) %>%
+  mutate(clust_label = paste0("Size_", clust_rank)) %>%
+  dplyr::select(-clust_rank) %>%
+  spread(key = clust_label, value = size) %>%
+  group_by(k, seed) %>%
+  summarize(c1 = first(clust_num),
+            c2 = last(clust_num),
+            Size_1 = min(Size_1, na.rm = TRUE),
+            Size_2 = min(Size_2, na.rm = TRUE))
+
+# get location of peak numerically with MASS:kde2d
+s2d <- with(cli_sizes, kde2d(Size_1, Size_2, n = 100))
+s2d_peak <- which(s2d$z == max(s2d$z))
+Size_1_peak_at <- round(s2d$x[s2d_peak %% 100], 1)
+Size_2_peak_at <- round(s2d$y[s2d_peak %/% 100], 1)
+```
+
+From which we can plot:
+
+```{r echo=FALSE, fig.width = 8, fig.height = 6}
+xend <- Size_1_peak_at + 100
+yend <- Size_2_peak_at + 100
+ggplot(cli_sizes, aes(Size_1, Size_2)) +
+  geom_point(alpha = 0.5, size = 2) +
+  stat_density2d() +
+  annotate("segment", x = Size_1_peak_at, y = Size_2_peak_at,
+           xend = xend, yend = yend, color = "red", size = 1) +
+  annotate("text", xend, yend, label = paste0("(", Size_1_peak_at, ", ", Size_2_peak_at, ")"), vjust = 0) +
+  ggtitle(paste0("Size of Cluster 2 by Size of Cluster 1 for k=", num_clusters, ", # tries=", num_trys))
+```
+
+Now we just need the distance of each solution's first & second cluster counts to the peak we found above:
+
+``` {r}
+cli_best <- cli_sizes %>%
+  filter(c1 == 1 & c2 == 2) %>%    ## just look at solutions with clusters in decending sizes
+  mutate(distance = sqrt((Size_1 - Size_1_peak_at)^2 + (Size_2 - Size_2_peak_at)^2)) %>%
+  dplyr::select(-starts_with("c")) %>% 
+  arrange(distance)
+cli_best
+```
 
 
 
