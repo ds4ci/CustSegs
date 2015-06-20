@@ -8,6 +8,6 @@
 ^Results$
 Flexclust\_cache$
 Flexclust\_files$
-^.*\.Rmd$
 ^.*\.docx$
 ^.*\.html$
+

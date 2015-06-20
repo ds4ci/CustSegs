@@ -8,9 +8,12 @@ Maintainer: Jim Porzak <jim@ds4ci.org>
 Description: A set of tools for doing customer segmentatio with R. Initially focused on using flexclust package.
 License: GPL-2
 LazyData: TRUE
-Imports:
+Imports: 
   dplyr,
   flexclust,
+  grid,
   ggplot2,
   MASS,
   tidyr
+Suggests: knitr
+VignetteBuilder: knitr
