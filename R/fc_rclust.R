@@ -21,9 +21,11 @@
 #' @param seed Integer. Starting set.seed value for this run.
 #' @param plotme Logical. Should plot be produced as side-effect?
 #' @return A list(best, sizes, peak_at, tries)
-fc_rclust <- function(x, k, fc_cont, nrep=100, verbose=FALSE, FUN = kcca, seed=1234, plotme=TRUE){
+fc_rclust <- function(x, k, fc_cont, nrep=100, fc_family,
+                      verbose=FALSE, FUN = kcca, seed=1234, plotme=TRUE){
+  num_clusters <- k
   fc_seed = seed
-  fc_tries <- NULL
+  cli_tries <- NULL    ## kcca objects will be saved here for review
   for (itry in 1:nrep) {
     fc_seed <- fc_seed + 1
     set.seed(fc_seed)
@@ -37,11 +39,11 @@ fc_rclust <- function(x, k, fc_cont, nrep=100, verbose=FALSE, FUN = kcca, seed=1
       dplyr::select(c(6, 5, 1:4))
     cli_try <- cbind(data.frame(k = num_clusters, seed = fc_seed),
                      cli_info)
-    cli_trys <- rbind(cli_trys, cli_try)
+    cli_tries <- rbind(cli_tries, cli_try)
   }
-  cli_trys <- as.tbl(cli_trys)
+  cli_tries <- as.tbl(cli_tries)
 
-  cli_sizes <- cli_trys %>%
+  cli_sizes <- cli_tries %>%
     dplyr::select(k, seed, clust_num, clust_rank, size) %>%
     dplyr::filter(clust_rank <= 2) %>%
     dplyr::mutate(clust_label = paste0("Size_", clust_rank),
@@ -62,14 +64,16 @@ fc_rclust <- function(x, k, fc_cont, nrep=100, verbose=FALSE, FUN = kcca, seed=1
   if(plotme) {
     xend <- Size_1_peak_at + 100   ## needs smarter calculation of this.
     yend <- Size_2_peak_at + 100
-    p <- ggplot2::ggplot(cli_sizes, aes(Size_1, Size_2)) +
+    p <- ggplot2::ggplot(cli_sizes, ggplot2::aes(Size_1, Size_2)) +
       ggplot2::geom_point(alpha = 0.5, size = 2) +
       ggplot2::stat_density2d() +
       ggplot2::annotate("segment", x = Size_1_peak_at, y = Size_2_peak_at,
-               xend = xend, yend = yend, color = "red", size = 1) +
+                        xend = xend, yend = yend, color = "red", size = 1) +
       ggplot2::annotate("text", xend, yend,
-               label = paste0("(", Size_1_peak_at, ", ", Size_2_peak_at, ")"), vjust = 0) +
-      ggplot2::ggtitle(paste0("Size of Cluster 2 by Size of Cluster 1 for k=", k, ", # tries=", nrep))
+                        label = paste0("(", Size_1_peak_at, ", ",
+                                       Size_2_peak_at, ")"), vjust = 0) +
+      ggplot2::ggtitle(paste0("Size of Cluster 2 by Size of Cluster 1 for k=", k,
+                              ", # tries=", nrep))
     print(p)
   }
 
@@ -81,5 +85,5 @@ fc_rclust <- function(x, k, fc_cont, nrep=100, verbose=FALSE, FUN = kcca, seed=1
   return(list(best = cli_best,
               sizes = cli_sizes,
               peak_at = c(Size_1_peak_at, Size_2_peak_at),
-              tries = cli_trys))
+              tries = cli_tries))
 }
