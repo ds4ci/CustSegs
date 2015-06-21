@@ -1,7 +1,8 @@
 #' Generate a List of Random kcca Objects.
 #'
 #' For a given number of clusters, \code{k}, \code{nrep} kcca objects are generated.
-#' Each is re-ordered so clusters are in decending size order. Cluster summary information is
+#'
+#' Each is kcca object is re-ordered so clusters are in decending size order. Cluster summary information is
 #' pulled out of each object from the \code{clusinfo} slot. This includes the sizes of the clusters.
 #'
 #' To look for stable cluster solutions, each random run is characterized by the sizes of the first
@@ -15,10 +16,11 @@
 #' @param k Integer. Number of clusters for this run.
 #' @param fc_contol The flexclust control object for this run.
 #' @param nrep Integer. Number of repititions to run.
-#' @param verbose Logical. Override for fc_control@verbose.
+#' @param verbose Logical. Override for fc_control slot verbose.
 #' @param FUN flexclust function.
 #' @param seed Integer. Starting set.seed value for this run.
 #' @param plotme Logical. Should plot be produced as side-effect?
+#' @return A list(best, sizes, peak_at, tries)
 fc_rclust <- function(x, k, fc_cont, nrep=100, verbose=FALSE, FUN = kcca, seed=1234, plotme=TRUE){
   fc_seed = seed
   fc_tries <- NULL
@@ -27,7 +29,7 @@ fc_rclust <- function(x, k, fc_cont, nrep=100, verbose=FALSE, FUN = kcca, seed=1
     set.seed(fc_seed)
     cli <- flexclust::kcca(x, k, save.data = TRUE,
                            control = fc_cont, family = kccaFamily(fc_family))
-    cli.re <- fc_reorder(cli, orderby = "decending size")
+    cli.re <- CustSegs::fc_reorder(cli, orderby = "decending size")
     cli_info <- cli.re@clusinfo %>%
       dplyr::mutate(clust_num = row_number(),
                     clust_rank = min_rank(desc(size))) %>%
