@@ -1,4 +1,24 @@
-
+#' Generate a List of Random kcca Objects.
+#'
+#' For a given number of clusters, \code{k}, \code{nrep} kcca objects are generated.
+#' Each is re-ordered so clusters are in decending size order. Cluster summary information is
+#' pulled out of each object from the \code{clusinfo} slot. This includes the sizes of the clusters.
+#'
+#' To look for stable cluster solutions, each random run is characterized by the sizes of the first
+#' two clusters; which will be the largest after reording. \code{kde2d()} from the MASS package is
+#' used to find density contours. The highest peak is determined and the distance of each solution
+#' to the peak is retained for each cluster.
+#'
+#' Optionally, the scatter plot of the sizes and corresponding coutour in plotted.
+#'
+#' @param x Integer. matrix. Input to kcca.
+#' @param k Integer. Number of clusters for this run.
+#' @param fc_contol The flexclust control object for this run.
+#' @param nrep Integer. Number of repititions to run.
+#' @param verbose Logical. Override for fc_control@verbose.
+#' @param FUN flexclust function.
+#' @param seed Integer. Starting set.seed value for this run.
+#' @param plotme Logical. Should plot be produced as side-effect?
 fc_rclust <- function(x, k, fc_cont, nrep=100, verbose=FALSE, FUN = kcca, seed=1234, plotme=TRUE){
   fc_seed = seed
   fc_tries <- NULL
@@ -7,7 +27,8 @@ fc_rclust <- function(x, k, fc_cont, nrep=100, verbose=FALSE, FUN = kcca, seed=1
     set.seed(fc_seed)
     cli <- flexclust::kcca(x, k, save.data = TRUE,
                            control = fc_cont, family = kccaFamily(fc_family))
-    cli_info <- cli@clusinfo %>%
+    cli.re <- fc_reorder(cli, orderby = "decending size")
+    cli_info <- cli.re@clusinfo %>%
       dplyr::mutate(clust_num = row_number(),
                     clust_rank = min_rank(desc(size))) %>%
       dplyr::arrange(clust_rank) %>%
@@ -37,7 +58,7 @@ fc_rclust <- function(x, k, fc_cont, nrep=100, verbose=FALSE, FUN = kcca, seed=1
   Size_2_peak_at <- round(s2d$y[s2d_peak %/% 100], 1)
 
   if(plotme) {
-    xend <- Size_1_peak_at + 100
+    xend <- Size_1_peak_at + 100   ## needs smarter calculation of this.
     yend <- Size_2_peak_at + 100
     p <- ggplot2::ggplot(cli_sizes, aes(Size_1, Size_2)) +
       ggplot2::geom_point(alpha = 0.5, size = 2) +
@@ -51,9 +72,9 @@ fc_rclust <- function(x, k, fc_cont, nrep=100, verbose=FALSE, FUN = kcca, seed=1
   }
 
   cli_best <- cli_sizes %>%
-    dplyr::filter(in_order) %>%    ## just look at solutions with clusters in decending sizes
     dplyr::mutate(distance = sqrt((Size_1 - Size_1_peak_at)^2 + (Size_2 - Size_2_peak_at)^2)) %>%
-    dplyr::arrange(distance)
+    dplyr::arrange(distance) %>%
+    dplyr::slice(1:10)
 
   return(list(best = cli_best,
               sizes = cli_sizes,
